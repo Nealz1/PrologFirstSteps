@@ -1,0 +1,138 @@
+:- use_module(library(lists)).
+:- use_module(library(random)).
+
+% forma: istota, [rodzaj wrażliwości]
+vulnerable(scarecrow, [fire, physical]).
+vulnerable(bird, [fire, ice]).
+vulnerable(fire_elemental, [ice, water]).
+vulnerable(ice_golem, [fire, earth]).
+vulnerable(rock_monster, [physical, shadow]).
+vulnerable(water_nymph, [electricity, physical]).
+vulnerable(wind_spirit, [earth, ice]).
+vulnerable(goblin, [ice, electricity, fire, physical]).
+vulnerable(undead_warrior, [radiant, physical]).
+vulnerable(cyclops, [shadow, physical]).
+vulnerable(skeleton_mage, [radiant, fire]).
+vulnerable(slime_monster, [physical, cold]).
+vulnerable(wraith, [radiant, fire]).
+vulnerable(demonic_beast, [radiant, ice]).
+vulnerable(giant_scorpion, [fire, shadow, water]).
+vulnerable(centaur, [wind, ice, physical]).
+vulnerable(lich, [radiant, fire]).
+vulnerable(death_knight, [radiant, electricity]).
+
+% forma: zaklęcie/broń, rodzaj obrażeń, melee\ranged
+damage_type(fireball, fire).
+damage_type(ray_of_frost, ice).
+damage_type(flame_strike, fire).
+damage_type(earthquake, earth).
+damage_type(lightning_bolt, electricity).
+damage_type(poison_dart, wind).
+damage_type(thunderwave, electricity).
+damage_type(acid_spray, earth).
+damage_type(eldritch_blast, fire).
+damage_type(frostbite, ice).
+damage_type(sacred_flame, radiant).
+damage_type(disintegrate, shadow).
+damage_type(holy_light, radiant).
+damage_type(shadow_bolt, shadow).
+damage_type(blizzard, ice).
+damage_type(fire_blast, fire).
+damage_type(lightning_strike, electricity).
+damage_type(venomous_strike, earth).
+damage_type(dragon_breath, fire).
+damage_type(frost_arrow, ice).
+damage_type(boulder_throw, physical).
+damage_type(void_blast, shadow).
+
+% forma: postać, [zaklęcie\broń]
+arsenal(paladin, [flame_strike, sacred_flame]).
+arsenal(wizard, [fireball, ray_of_frost, thunderwave, acid_spray, disintegrate]).
+arsenal(rogue, [poison_dart]).
+arsenal(cleric, [sacred_flame]).
+arsenal(ranger, [lightning_bolt]).
+arsenal(bard, [thunderwave]).
+arsenal(sorcerer, [fireball, frostbite]).
+arsenal(warlock, [eldritch_blast, disintegrate]).
+arsenal(druid, [thunderwave]).
+arsenal(priest, [holy_light, shadow_bolt]).
+arsenal(mage, [fire_blast, blizzard, lightning_strike]).
+arsenal(assassin, [venomous_strike, shadow_bolt]).
+arsenal(warrior, [boulder_throw]).
+arsenal(hunter, [frost_arrow, venomous_strike]).
+arsenal(dark_knight, [void_blast, shadow_bolt]).
+arsenal(dragon_knight, [dragon_breath, boulder_throw]).
+arsenal(necromancer, [shadow_bolt]).
+arsenal(elementalist, [fire_blast, blizzard, lightning_strike]).
+arsenal(paladin, [holy_light, boulder_throw]).
+
+% sprawdzanie przynależności do listy
+nalezy(X, [X|_]).
+nalezy(X, [_|Y]) :- nalezy(X,Y).
+
+% pokazanie elementów z listy
+show_records([]).
+show_records([A|B]) :-
+    write(A), write(", "),
+    show_records(B).
+
+% forma: stwor, punkty zdrowia, niwelacja hp
+creature(_, CreatureHP, CreatureDefense) :-
+    random_between(10, 300, CreatureHP),
+    random_between(1, 20, CreatureDefense).
+
+% forma: postać, wartość ataku
+hero(_, HeroAttack) :-
+    random_between(10, 100, HeroAttack).
+
+% forma: zaklęcie, obrażenia
+spell_damage(_, Damage) :-
+    random_between(10, 100, Damage).
+
+groupArsenal([Hero | Heroes], Arsenal) :-
+    arsenal(Hero, Arsenal);
+    groupArsenal(Heroes, Arsenal).
+
+% sprawdzenie wrażliwości na podane rzeczy
+isVulnerable(_, []).
+isVulnerable(Creature, Vul) :- vulnerable(Creature, X), nalezy(Vul, X).
+isVulnerable(Creature, [Vul | Vuls]) :- isVulnerable(Creature, Vul), isVulnerable(Creature, Vuls).
+
+% sprawdzenie rodzaju broni / bohatera / istoty do ataku
+jakiAtak(Hero, Creature, Weapon) :-
+    arsenal(Hero, Arsenal),
+    nalezy(Weapon, Arsenal),
+    damage_type(Weapon, Type),
+    isVulnerable(Creature, Type).
+
+ktoJakiAtak([Hero|Heroes], Creature, Weapon, Caster) :-
+    ktoJakiAtak(Heroes, Creature, Weapon, Caster);
+    jakiAtak(Hero, Creature, Weapon),
+    Caster = Hero.
+
+coJakaBronia(Heroes, [Creature | Creatures], Creat, Weapon, Caster) :-
+    Creat = Creature,
+    ktoJakiAtak(Heroes, Creature, Weapon, Caster);
+    coJakaBronia(Heroes, Creatures, Creat, Weapon, Caster).
+
+% forma: ktoWygra(Postać, Stwor) -> zwycięzca
+ktoWygra(Hero, Creature, Winner, WinningSpell) :-
+    arsenal(Hero, Spells),
+    creature(Creature, CreatureHP, CreatureDefense),
+    hero(Hero, HeroAttack),
+    member(Spell, Spells),
+    damage_type(Spell, DamageType),
+    spell_damage(Spell, Damage),
+    isVulnerable(Creature, DamageType),
+    TotalDamage is (Damage * HeroAttack) / CreatureDefense,
+    (
+        TotalDamage > CreatureHP ->
+        (
+            Winner = Hero,
+            WinningSpell = Spell
+        );
+        (
+            Winner = Creature,
+            WinningSpell = 'Brak'
+        )
+    ).
